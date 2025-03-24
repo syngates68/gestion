@@ -195,7 +195,7 @@ class FinancesController
             $description .= Users::getById($members[$i])->first_name();
         }
 
-        if (isset($_POST['description_apport_libre']) && $_POST['description_apport_libre'] !== null) {
+        if (isset($_POST['description_apport_libre']) && $_POST['description_apport_libre'] !== '') {
             $description .= ' ('.$_POST['description_apport_libre'].')';
         }
 
