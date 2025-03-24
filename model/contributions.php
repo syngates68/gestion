@@ -35,7 +35,7 @@ class Contributions extends Model
 		$data = $s->fetch(PDO::FETCH_ASSOC);
         
 		if ($data)
-			return new Sold($data['id'], $data['id_finance'], $data['id_user']);
+			return new Sold($data['id'], $data['id_finance'], $data['id_user'], 0, 0);
 		else
 			return null;
 	}
@@ -51,7 +51,7 @@ class Contributions extends Model
 
 		while ($row = $s->fetch(PDO::FETCH_ASSOC, PDO::FETCH_ORI_NEXT))
         {
-            array_push($res, new Sold($row['id'], $row['id_finance'], $row['id_user']));
+            array_push($res, new Sold($row['id'], $row['id_finance'], $row['id_user'], 0, 0));
         }
 
 		if (!empty($res))

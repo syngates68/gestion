@@ -225,9 +225,4 @@ class InventaireController
             exit;
         }
     }
-
-    public function get_modifier()
-    {
-        include 'view/inventaire/modifier.inc.php';
-    }
 }
