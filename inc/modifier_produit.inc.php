@@ -7,6 +7,9 @@ require_once('../model/model.php');
 require_once('../model/inventories.php');
 
 //On initialise le lien avec la BDD pour les modèles
+/**
+ * @var \PDO $bdd
+ */
 Model::set_db($bdd);
 
 $inventory = Inventories::getById($_GET['produit']);

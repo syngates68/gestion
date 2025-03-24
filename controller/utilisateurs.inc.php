@@ -12,65 +12,49 @@ class UtilisateursController
 {
     public function post_connexion()
     {
-        $mail = (isset($_POST['mail'])) ? $_POST['mail'] : null;
-        $pass = (isset($_POST['pass'])) ? $_POST['pass'] : null;
+        $mail = isset($_POST['mail']) ? $_POST['mail'] : null;
+        $pass = isset($_POST['pass']) ? $_POST['pass'] : null;
 
-        if ($mail != null && $pass != null)
-        {
-            $u = Users::getByMail($mail);
-            if ($u != null)
-            {
-                if (password_verify($pass, $u->password()))
-                {
-                    if ($u->confirmed() == 1)
-                    {
-                        $_SESSION['user'] = $u->id();
-                        $pages = Members::countByUser($_SESSION['user']);
-                        if ($pages == 1)
-                        {
-                            $member = Members::getByUser($_SESSION['user']);
-                            foreach ($member as $m)
-                            {
-                                $p = Pages::getById($m->id_page());
-                            }
-                            header('Location: index.php?page='.$p->uuid().'&ctrl=finances&action=afficher');
-                            exit;
-                        }
-                        else
-                        {
-                            header('Location: index.php?ctrl=pages&action=afficher');
-                            exit;
-                        }
-                    }
-                    else
-                    {
-                        $_SESSION['error_message'] = "Vous devez confirmer votre adresse mail en cliquant sur le lien reçu par mail afin de vous connecter.";
-                        $_SESSION['mail'] = $mail;
-                        header('Location: connexion.php');
-                        exit;
-                    }
-                }
-                else
-                {
-                    $_SESSION['error_message'] = "Aucun compte ne correspond aux informations rentrées.";
-                    $_SESSION['mail'] = $mail;
-                    header('Location: connexion.php');
-                    exit;
-                }
-            }
-            else
-            {
-                $_SESSION['error_message'] = "Aucun compte ne correspond aux informations rentrées.";
-                $_SESSION['mail'] = $mail;
-                header('Location: connexion.php');
-                exit;
-            }
-        }
-        else
-        {
+        if ($mail === null || $pass === null) {
             $_SESSION['error_message'] = "Veuillez renseigner vos informations de connexion.";
             $_SESSION['mail'] = $mail;
             header('Location: connexion.php');
+            exit;
+        }
+
+        $user = Users::getByMail($mail);
+
+        if ($user === null) {
+            $_SESSION['error_message'] = "Aucun compte ne correspond aux informations renseignées.";
+            $_SESSION['mail'] = $mail;
+            header('Location: connexion.php');
+            exit;
+        }
+
+        if (! password_verify($pass, $user->password())) {
+            $_SESSION['error_message'] = "Aucun compte ne correspond aux informations renseignées.";
+            $_SESSION['mail'] = $mail;
+            header('Location: connexion.php');
+            exit;
+        }
+
+        if ($user->confirmed() === 0) {
+            $_SESSION['error_message'] = "Vous devez confirmer votre adresse mail en cliquant sur le lien reçu par mail afin de vous connecter.";
+            $_SESSION['mail'] = $mail;
+            header('Location: connexion.php');
+            exit;
+        }
+
+        $_SESSION['user'] = $user->id();
+        $countPagesWhereMember = Members::countByUser($_SESSION['user']);
+
+        if ($countPagesWhereMember === 1) {
+            $pagesWhereMember = Members::getByUser($_SESSION['user']);
+            $page = Pages::getById($pagesWhereMember[0]->id_page());
+            header('Location: index.php?page='.$page->uuid().'&ctrl=finances&action=afficher');
+            exit;
+        } else {
+            header('Location: index.php?ctrl=pages&action=afficher');
             exit;
         }
     }
