@@ -19,6 +19,9 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class FinancesController
 {
+    private const MERCH = 0;
+    private const OTHER = 1;
+
     public function get_afficher()
     {
         $page = Pages::getByUuid($_GET['page']);
@@ -36,257 +39,175 @@ class FinancesController
 
     public function post_entree()
     {
-        //Merch
-        if ($_POST['form_type'] == 0)
-        {
+        if ($_POST['form_type'] === self::MERCH) {
             $quantity = $_POST['quantity'];
-            $is_numeric_and_set = true;
-            for ($i = 0; $i < sizeof($quantity); $i++)
-            {
-                if ($quantity[$i] == null || $quantity[$i] == '' || !is_numeric($quantity[$i]))
-                    $is_numeric_and_set = false;
-            }
+            $isNumericAndSet = true;
 
-            if ($is_numeric_and_set)
-            {
-                $description = '';
-                for ($i = 0; $i < sizeof($quantity); $i++)
-                {
-                    if ($quantity[$i] > 0)
-                    {
-                        if ($i > 0 && $description != '')
-                            $description .= ' + ';
-
-                        $inv = $_POST['product'][$i];
-                        $size = null;
-
-                        if (stripos($_POST['product'][$i], '_') !== false)
-                        {
-                            $product = explode('_', $_POST['product'][$i]);
-                            $inv = $product[0];
-                            $size = $product[1];
-                        }
-                        $inv_name = Inventories::getById($inv)->description();
-                        $size_name = '';
-                        if ($size != null)
-                            $size_name = ' Taille '.Sizes::getById(ProductSizes::getById($size)->id_size())->label();
-                        $description .= $quantity[$i].' '.$inv_name.$size_name;
-                    }
-                }
-
-                if ($description != '')
-                {
-                    $amount = str_replace(',', '.', $_POST['montant']);
-                    if (stripos($amount, '.') !== false)
-                    {
-                        $int = explode('.', $amount)[0];
-                        $dec = explode('.', $amount)[1];
-                        if (strlen($dec) == 1)
-                            $dec .= 0;
-                        $amount = $int.'.'.$dec;
-                    }
-                    $amount = $amount * 100;
-
-                    if (isset($_POST['description_libre_merch']) && $_POST['description_libre_merch'] != null)
-                        $description .= ' ('.$_POST['description_libre_merch'].')';
-
-                    $finance = Finances::insertFinance(Pages::getByUuid($_GET['page'])->id(), 1, $description, $amount, date('Y-m-d H:i:s'));
-                    //On met à jour les stocks
-                    for ($i = 0; $i < sizeof($quantity); $i++)
-                    {
-                        if ($quantity[$i] > 0)
-                        {
-                            $inv = $_POST['product'][$i];
-                            $size = null;
-
-                            if (stripos($_POST['product'][$i], '_') !== false)
-                            {
-                                $product = explode('_', $_POST['product'][$i]);
-                                $inv = $product[0];
-                                $size = $product[1];
-                            }
-                            
-                            if ($size == null)
-                            {
-                                $inventory = Inventories::getById($inv);
-                                $stock = $inventory->stock() - $quantity[$i];
-                                $inventory->modifyInventory($inventory->description(), $inventory->price(), $stock);
-                                if ($stock == 0)
-                                    $inventory->disableInventory();
-                                $inventory->save();
-                                $inventoryId = $inventory->id();
-                                $isGarment = 0;
-                            }
-                            else
-                            {
-                                $productSize = ProductSizes::getById($size);
-                                $stock = $productSize->stock() - $quantity[$i];
-                                $productSize->modifyProductSIze($stock);
-                                $productSize->save();
-                                $inventoryId = $productSize->id();
-                                $isGarment = 1;
-                            }
-
-                            //On rajoute dans les produits vendus
-                            Sold::insertSold($finance->id(), $inventoryId, $quantity[$i], $isGarment);
-                        }
-                    }
-                    $_SESSION['success_message'] = "L'entrée d'argent a bien été ajoutée.";
-                    header('Location:index.php?page='.$_GET['page'].'&ctrl=finances&action=afficher');
-                    exit;
-                }
-                else
-                {
-                    $_SESSION['error_message'] = "Veuillez renseigner au moins un élément vendu.";
-                    header('Location:index.php?page='.$_GET['page'].'&ctrl=finances&action=afficher');
-                    exit;
+            for ($i = 0; $i < sizeof($quantity); $i++) {
+                if ($quantity[$i] == null || $quantity[$i] == '' || ! is_numeric($quantity[$i])) {
+                    $isNumericAndSet = false;
                 }
             }
-            else
-            {
+
+            if (! $isNumericAndSet) {
                 $_SESSION['error_message'] = "Veuillez correctement renseigner tous les champs requis.";
                 header('Location:index.php?page='.$_GET['page'].'&ctrl=finances&action=afficher');
                 exit;
             }
-        }
-        //Autre
-        else
-        {
-            $amount = (isset($_POST['montant_libre'])) ? $_POST['montant_libre'] : null;
-            $description = (isset($_POST['description_libre'])) ? $_POST['description_libre'] : null;
 
-            if ($amount != null && $description != null)
-            {
-                if (is_numeric($amount))
-                {
-                    $amount = str_replace(',', '.', $amount);
-                    if (stripos($amount, '.') !== false)
-                    {
-                        $int = explode('.', $amount)[0];
-                        $dec = explode('.', $amount)[1];
-                        if (strlen($dec) == 1)
-                            $dec .= 0;
-                        $amount = $int.'.'.$dec;
+            $description = null;
+            for ($i = 0; $i < sizeof($quantity); $i++) {
+                if ($quantity[$i] > 0) {
+                    if ($i > 0 && $description !== null) {
+                        $description .= ' + ';
                     }
-                    $amount = $amount * 100;
 
-                    Finances::insertFinance(Pages::getByUuid($_GET['page'])->id(), 1, $description, $amount, date('Y-m-d H:i:s'));
-                    $_SESSION['success_message'] = "L'entrée d'argent a bien été ajoutée.";
-                    header('Location:index.php?page='.$_GET['page'].'&ctrl=finances&action=afficher');
-                    exit;
-                }
-                else
-                {
-                    $_SESSION['error_message'] = "Le montant doit être un chiffre ou un nombre à virgule.";
-                    header('Location:index.php?page='.$_GET['page'].'&ctrl=finances&action=afficher');
-                    exit;
+                    $inv = $_POST['product'][$i];
+                    $size = null;
+
+                    if (stripos($_POST['product'][$i], '_') !== false) {
+                        $product = explode('_', $_POST['product'][$i]);
+                        $inv = $product[0];
+                        $size = $product[1];
+                    }
+
+                    $invName = Inventories::getById($inv)->description();
+                    $sizeName = '';
+
+                    if ($size !== null) {
+                        $sizeName = ' Taille '.Sizes::getById(ProductSizes::getById($size)->id_size())->label();
+                    }
+
+                    $description .= $quantity[$i].' '.$invName.$sizeName;
                 }
             }
-            else
-            {
+        }
+
+        if ($_POST['form_type'] === self::OTHER) {
+            $amount = isset($_POST['montant_libre']) ? $_POST['montant_libre'] : null;
+            $description = isset($_POST['description_libre']) ? $_POST['description_libre'] : null;
+
+            if ($amount === null || $description === null) {
                 $_SESSION['error_message'] = "Veuillez renseigner tous les champs demandés.";
                 header('Location:index.php?page='.$_GET['page'].'&ctrl=finances&action=afficher');
                 exit;
             }
+
+            if (! is_numeric($amount)) {
+                $_SESSION['error_message'] = "Le montant doit être un chiffre ou un nombre à virgule.";
+                header('Location:index.php?page='.$_GET['page'].'&ctrl=finances&action=afficher');
+                exit;
+            }
+
+            $amount = str_replace(',', '.', $amount);
+            if (stripos($amount, '.') !== false) {
+                $int = explode('.', $amount)[0];
+                $dec = explode('.', $amount)[1];
+                if (strlen($dec) === 1) {
+                    $dec .= 0;
+                }
+
+                $amount = $int.'.'.$dec;
+            }
+
+            $amount = (float) $amount * 100;
+
+            Finances::insertFinance(Pages::getByUuid($_GET['page'])->id(), 1, $description, $amount, date('Y-m-d H:i:s'));
+            $_SESSION['success_message'] = "L'entrée d'argent a bien été ajoutée.";
+            header('Location:index.php?page='.$_GET['page'].'&ctrl=finances&action=afficher');
+            exit;
         }
     }
 
     public function post_sortie()
     {
-        $amount = (isset($_POST['montant_sortie_libre'])) ? $_POST['montant_sortie_libre'] : null;
-        $description = (isset($_POST['description_sortie_libre'])) ? $_POST['description_sortie_libre'] : null;
+        $amount = isset($_POST['montant_sortie_libre']) ? $_POST['montant_sortie_libre'] : null;
+        $description = isset($_POST['description_sortie_libre']) ? $_POST['description_sortie_libre'] : null;
 
-        if ($amount != null && $description != null)
-        {
-            if (is_numeric($amount))
-            {
-                $amount = str_replace(',', '.', $amount);
-                if (stripos($amount, '.') !== false)
-                {
-                    $int = explode('.', $amount)[0];
-                    $dec = explode('.', $amount)[1];
-                    if (strlen($dec) == 1)
-                        $dec .= 0;
-                    $amount = $int.'.'.$dec;
-                }
-                $amount = $amount * 100;
-
-                Finances::insertFinance(Pages::getByUuid($_GET['page'])->id(), 0, $description, $amount, date('Y-m-d H:i:s'));
-                $_SESSION['success_message'] = "La sortie d'argent a bien été ajoutée.";
-                header('Location:index.php?page='.$_GET['page'].'&ctrl=finances&action=afficher');
-                exit;
-            }
-            else
-            {
-                $_SESSION['error_message'] = "Le montant doit être un chiffre ou un nombre à virgule.";
-                header('Location:index.php?page='.$_GET['page'].'&ctrl=finances&action=afficher');
-                exit;
-            }
-        }
-        else
-        {
+        if ($amount === null || $description === null) {
             $_SESSION['error_message'] = "Veuillez renseigner tous les champs demandés.";
             header('Location:index.php?page='.$_GET['page'].'&ctrl=finances&action=afficher');
             exit;
         }
+
+        if (! is_numeric($amount)) {
+            $_SESSION['error_message'] = "Le montant doit être un chiffre ou un nombre à virgule.";
+            header('Location:index.php?page='.$_GET['page'].'&ctrl=finances&action=afficher');
+            exit;
+        }
+
+        $amount = str_replace(',', '.', $amount);
+        if (stripos($amount, '.') !== false) {
+            $int = explode('.', $amount)[0];
+            $dec = explode('.', $amount)[1];
+            if (strlen($dec) === 1) {
+                $dec .= 0;
+            }
+
+            $amount = $int.'.'.$dec;
+        }
+
+        $amount = (float) $amount * 100;
+
+        Finances::insertFinance(Pages::getByUuid($_GET['page'])->id(), 0, $description, $amount, date('Y-m-d H:i:s'));
+        $_SESSION['success_message'] = "La sortie d'argent a bien été ajoutée.";
+        header('Location:index.php?page='.$_GET['page'].'&ctrl=finances&action=afficher');
+        exit;
     }
 
     public function post_apport()
     {
-        $amount = (isset($_POST['montant_apport_libre'])) ? $_POST['montant_apport_libre'] : null;
-        $members = (isset($_POST['members'])) ? $_POST['members'] : [];
+        $amount = isset($_POST['montant_apport_libre']) ? $_POST['montant_apport_libre'] : null;
+        $members = isset($_POST['members']) ? $_POST['members'] : [];
 
-        if ($amount != null && !empty($members))
-        {
-            if (is_numeric($amount))
-            {
-                $amount = str_replace(',', '.', $amount);
-                if (stripos($amount, '.') !== false)
-                {
-                    $int = explode('.', $amount)[0];
-                    $dec = explode('.', $amount)[1];
-                    if (strlen($dec) == 1)
-                        $dec .= 0;
-                    $amount = $int.'.'.$dec;
-                }
-                $amount = $amount * 100;
-
-                $description = "Apport de ";
-
-                for ($i = 0; $i < sizeof($members); $i++)
-                {
-                    if ($i > 0)
-                        $description .= ', ';
-                    $description .= Users::getById($members[$i])->first_name();
-                }
-
-                if (isset($_POST['description_apport_libre']) && $_POST['description_apport_libre'] != null)
-                    $description .= ' ('.$_POST['description_apport_libre'].')';
-
-                $finance = Finances::insertFinance(Pages::getByUuid($_GET['page'])->id(), 2, $description, $amount, date('Y-m-d H:i:s'));
-
-                for ($i = 0; $i < sizeof($members); $i++)
-                {
-                    Contributions::insertContribution($finance->id(), $members[$i]);
-                }
-
-                $_SESSION['success_message'] = "L'apport a bien été ajouté.";
-                header('Location:index.php?page='.$_GET['page'].'&ctrl=finances&action=afficher');
-                exit;
-            }
-            else
-            {
-                $_SESSION['error_message'] = "Le montant doit être un chiffre ou un nombre à virgule.";
-                header('Location:index.php?page='.$_GET['page'].'&ctrl=finances&action=afficher');
-                exit;
-            }
-        }
-        else
-        {
+        if ($amount === null || empty($members)) {
             $_SESSION['error_message'] = "Veuillez renseigner un montant ainsi que les personnes ayant apporté de l'argent.";
             header('Location:index.php?page='.$_GET['page'].'&ctrl=finances&action=afficher');
             exit;
         }
+
+        if (! is_numeric($amount)) {
+            $_SESSION['error_message'] = "Le montant doit être un chiffre ou un nombre à virgule.";
+            header('Location:index.php?page='.$_GET['page'].'&ctrl=finances&action=afficher');
+            exit;
+        }
+
+        $amount = str_replace(',', '.', $amount);
+        if (stripos($amount, '.') !== false) {
+            $int = explode('.', $amount)[0];
+            $dec = explode('.', $amount)[1];
+            if (strlen($dec) === 1) {
+                $dec .= 0;
+            }
+
+            $amount = $int.'.'.$dec;
+        }
+
+        $amount = (float) $amount * 100;
+
+        $description = "Apport de ";
+
+        for ($i = 0; $i < sizeof($members); $i++) {
+            if ($i > 0) {
+                $description .= ', ';
+            }
+
+            $description .= Users::getById($members[$i])->first_name();
+        }
+
+        if (isset($_POST['description_apport_libre']) && $_POST['description_apport_libre'] !== null) {
+            $description .= ' ('.$_POST['description_apport_libre'].')';
+        }
+
+        $finance = Finances::insertFinance(Pages::getByUuid($_GET['page'])->id(), 2, $description, $amount, date('Y-m-d H:i:s'));
+
+        for ($i = 0; $i < sizeof($members); $i++) {
+            Contributions::insertContribution($finance->id(), $members[$i]);
+        }
+
+        $_SESSION['success_message'] = "L'apport a bien été ajouté.";
+        header('Location:index.php?page='.$_GET['page'].'&ctrl=finances&action=afficher');
+        exit;
     }
 
     public function get_supprimer()
@@ -396,7 +317,7 @@ class FinancesController
                 $sortie = str_replace(',', '.', ($f->amount() / 100));
 
             if ($f->type() == 1)
-                $total = $total + ($f->amount() / 100);
+                $total = (int) $total + ($f->amount() / 100);
             else if ($f->type() == 2)
                 $total = $total;
             else
