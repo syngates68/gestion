@@ -76,7 +76,7 @@ class Inventories extends Model
 			$productSizes = ProductSizes::getAllByInventory($row['id']);
 			$sizes = [];
 
-			if ($productSizes != null)
+			if ($productSizes !== null)
 			{
 				foreach ($productSizes as $ps)
 				{

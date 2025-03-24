@@ -14,7 +14,7 @@ class PagesController
     {
         $members = Members::getByUser($_SESSION['user']);
         $pages = [];
-        if ($members != null)
+        if ($members !== null)
         {
             foreach ($members as $m)
             {

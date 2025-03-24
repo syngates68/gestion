@@ -299,7 +299,7 @@ class FinancesController
 
         //On vérifie s'il s'agit d'une vente de merch
         $solds = Sold::getAllByFinance($finance->id());
-        if ($solds != null)
+        if ($solds !== null)
         {
             foreach ($solds as $s)
             {
