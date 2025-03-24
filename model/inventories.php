@@ -15,6 +15,7 @@ class Inventories extends Model
 	private $_stock;
 	private $_picture;
 	private $_active;
+    private $_sizes;
 
     public function __construct($id, $id_page, $description, $price, $stock, $picture, $active, $sizes = [])
     {

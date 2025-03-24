@@ -7,7 +7,7 @@ if ($srv == 'localhost' || $srv == '127.0.0.1')
 {
     define('DEV', true);
     define('BASEURL', $http.'://'.$srv);
-    define('ROOT', $_SERVER['DOCUMENT_ROOT'].'/test/');
+    define('ROOT', $_SERVER['DOCUMENT_ROOT'].'/gestion/');
     define('LIEN', $_SERVER['SERVER_ADDR']);
 }
 
