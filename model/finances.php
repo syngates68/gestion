@@ -59,8 +59,8 @@ class Finances extends Model
     public static function getAllByPage($id_page) 
     {
         $table = self::$_table;
-
-		$s = self::$_db->prepare("SELECT * FROM $table WHERE id_page = :id_page AND active = 1 ORDER BY date_add");
+        
+		$s = self::$_db->prepare("SELECT * FROM $table WHERE id_page = :id_page AND active = 1 ORDER BY date_add DESC");
 		$s->bindValue(':id_page', $id_page, PDO::PARAM_INT);
 		$s->execute();
         $res = [];
