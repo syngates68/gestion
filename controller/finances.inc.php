@@ -312,9 +312,9 @@ class FinancesController
             $entree = '';
             $sortie = '';
             if ($f->type() == 1 || $f->type() == 2)
-                $entree = str_replace(',', '.', ($f->amount() / 100));
+                $entree = str_replace(',', '.', (string) ($f->amount() / 100));
             if ($f->type() == 0 || $f->type() == 2)
-                $sortie = str_replace(',', '.', ($f->amount() / 100));
+                $sortie = str_replace(',', '.', (string) ($f->amount() / 100));
 
             if ($f->type() == 1)
                 $total = (int) $total + ($f->amount() / 100);
@@ -342,7 +342,7 @@ class FinancesController
         $sheet->setCellValue('C4', 'Réel gagné');
         $sheet->setCellValue('D4', strval($reel_gagne));
 
-        if (stripos($caisse, '-') !== false)
+        if (stripos((string) $caisse, '-') !== false)
             $color = 'ec7c77';
         else
             $color = '4caf42';
